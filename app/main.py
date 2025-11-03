@@ -1,5 +1,10 @@
+from datetime import datetime, timezone
+from typing import List, Optional
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+
+from app.models import Entry, EntryCreate, EntryUpdate, ReadingStatus
 
 app = FastAPI(title="SecDev Course App", version="0.1.0")
 
@@ -37,6 +42,9 @@ def health():
 # Example minimal entity (for tests/demo)
 _DB = {"items": []}
 
+# Reading List database
+_READING_LIST_DB = {"entries": [], "next_id": 1}
+
 
 @app.post("/items")
 def create_item(name: str):
@@ -55,3 +63,83 @@ def get_item(item_id: int):
         if it["id"] == item_id:
             return it
     raise ApiError(code="not_found", message="item not found", status=404)
+
+
+# ============================================================================
+# Reading List CRUD Endpoints
+# ============================================================================
+
+
+@app.post("/entries", response_model=Entry, status_code=201)
+def create_entry(entry_data: EntryCreate):
+    """Создать новую запись в списке для чтения"""
+    now = datetime.now(timezone.utc)
+    entry = Entry(
+        id=_READING_LIST_DB["next_id"],
+        title=entry_data.title,
+        author=entry_data.author,
+        status=entry_data.status,
+        notes=entry_data.notes,
+        created_at=now,
+        updated_at=now,
+    )
+    _READING_LIST_DB["entries"].append(entry)
+    _READING_LIST_DB["next_id"] += 1
+    return entry
+
+
+@app.get("/entries", response_model=List[Entry])
+def get_entries():
+    """Получить все записи из списка для чтения"""
+    return _READING_LIST_DB["entries"]
+
+
+@app.get("/entries/{entry_id}", response_model=Entry)
+def get_entry(entry_id: int):
+    """Получить запись по ID"""
+    for entry in _READING_LIST_DB["entries"]:
+        if entry.id == entry_id:
+            return entry
+    raise ApiError(code="not_found", message=f"Entry {entry_id} not found", status=404)
+
+
+@app.put("/entries/{entry_id}", response_model=Entry)
+def update_entry(entry_id: int, entry_data: EntryUpdate):
+    """Обновить существующую запись"""
+    for i, entry in enumerate(_READING_LIST_DB["entries"]):
+        if entry.id == entry_id:
+            # Обновляем только переданные поля
+            update_dict = entry_data.model_dump(exclude_unset=True)
+            update_dict["updated_at"] = datetime.now(timezone.utc)
+
+            updated_entry = entry.model_copy(update=update_dict)
+            _READING_LIST_DB["entries"][i] = updated_entry
+            return updated_entry
+
+    raise ApiError(code="not_found", message=f"Entry {entry_id} not found", status=404)
+
+
+@app.delete("/entries/{entry_id}", status_code=204)
+def delete_entry(entry_id: int):
+    """Удалить запись из списка"""
+    for i, entry in enumerate(_READING_LIST_DB["entries"]):
+        if entry.id == entry_id:
+            _READING_LIST_DB["entries"].pop(i)
+            return
+    raise ApiError(code="not_found", message=f"Entry {entry_id} not found", status=404)
+
+
+@app.get("/entries/filter/by-status", response_model=List[Entry])
+def filter_entries_by_status(
+    status: Optional[ReadingStatus] = None, author: Optional[str] = None
+):
+    """Фильтрация записей по статусу и/или автору"""
+    result = _READING_LIST_DB["entries"]
+
+    if status:
+        result = [e for e in result if e.status == status]
+
+    if author:
+        result = [e for e in result if author.lower() in e.author.lower()]
+
+    return result
