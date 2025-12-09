@@ -213,4 +213,3 @@ course-project-GyBJluHv2/
 ├── .gitignore
 └── DEVELOPMENT.md       # Этот файл
 ```
-

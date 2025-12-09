@@ -153,4 +153,3 @@
 - **NFR документация:** `docs/security-nfr/NFR.md`
 - **Матрица трассируемости:** `docs/security-nfr/NFR_TRACEABILITY.md`
 - **BDD сценарии:** `docs/security-nfr/NFR_BDD.md`
-
