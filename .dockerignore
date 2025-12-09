@@ -1,17 +1,99 @@
+# =============================================================================
+# .dockerignore - Files to exclude from Docker build context
+# Reduces build time and image size, improves security
+# =============================================================================
+
+# Git
 .git
 .gitignore
-.gitattributes
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.sqlite
-*.db
-.venv/
-dist/
-build/
-.pytest_cache/
+
+# Python artifacts
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+*.manifest
+*.spec
+
+# Virtual environments
+venv
+.venv
+ENV
+env
+
+# IDE and editors
+.idea
+.vscode
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+.settings
+
+# Testing
+.pytest_cache
 .coverage
-htmlcov/
-node_modules/
+htmlcov
+.tox
+.nox
+coverage.xml
+*.cover
+.hypothesis
+
+# Documentation
+docs/_build
+*.md
+!README.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.docker
+.dockerignore
+
+# Local configuration
 .env
+.env.*
+*.local
+secrets/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Development files
+requirements-dev.txt
+tests/
+Makefile
+scripts/
+
+# Security - never include
+*.pem
+*.key
+*.crt
+*.p12

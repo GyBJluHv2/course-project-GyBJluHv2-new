@@ -5,11 +5,15 @@ on:
     branches: [main]
 permissions:
   contents: read
+  security-events: write
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ===========================================================================
+  # Code Quality & Security
+  # ===========================================================================
   build:
     runs-on: ubuntu-latest
     steps:
@@ -43,3 +47,91 @@ jobs:
 
       - name: Pre-commit (all files)
         run: pre-commit run --all-files
+
+  # ===========================================================================
+  # Container Security (P07)
+  # ===========================================================================
+  container-security:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      # Hadolint - Dockerfile linter (C4)
+      - name: Lint Dockerfile (Hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          failure-threshold: warning
+
+      # Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t reading-list-api:${{ github.sha }} .
+          docker tag reading-list-api:${{ github.sha }} reading-list-api:latest
+
+      # Trivy - Container vulnerability scanner (C4)
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'reading-list-api:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      # Verify non-root user (C2)
+      - name: Verify container runs as non-root
+        run: |
+          USER_ID=$(docker run --rm reading-list-api:latest id -u)
+          echo "Container user ID: $USER_ID"
+          if [ "$USER_ID" = "0" ]; then
+            echo "::error::Container is running as root!"
+            exit 1
+          fi
+          echo "✅ Container runs as non-root user (UID: $USER_ID)"
+
+      # Verify healthcheck works (C2)
+      - name: Verify healthcheck
+        run: |
+          # Start container
+          docker run -d --name test-app -p 8000:8000 reading-list-api:latest
+
+          # Wait for container to be healthy
+          echo "Waiting for container to be healthy..."
+          for i in {1..30}; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' test-app 2>/dev/null || echo "starting")
+            echo "Health status: $STATUS"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "✅ Container is healthy!"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "::error::Container did not become healthy in time"
+              docker logs test-app
+              exit 1
+            fi
+            sleep 2
+          done
+
+          # Test health endpoint
+          curl -f http://localhost:8000/health || exit 1
+          echo "✅ Health endpoint responds correctly"
+
+          # Cleanup
+          docker stop test-app
+          docker rm test-app
+
+      # Output image info
+      - name: Docker image info
+        run: |
+          echo "### Docker Image Info" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          docker images reading-list-api --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Image History" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          docker history reading-list-api:latest --format "table {{.CreatedBy}}\t{{.Size}}" | head -20 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY

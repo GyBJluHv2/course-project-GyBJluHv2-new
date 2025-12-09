@@ -1,0 +1,59 @@
+# =============================================================================
+# Docker Compose for Reading List API (P07 - Container Hardening)
+# Secure local development and production configuration
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: reading-list-api:latest
+    container_name: reading-list-api
+
+    # Port mapping
+    ports:
+      - "8000:8000"
+
+    # Environment variables (no secrets in git!)
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+
+    # Health check (C2)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+    # Security hardening (C2)
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    # Temporary filesystem for Python cache
+    tmpfs:
+      - /tmp:noexec,nosuid,nodev,size=64m
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 64M
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Network configuration
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
