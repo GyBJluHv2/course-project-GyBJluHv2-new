@@ -1,0 +1,97 @@
+name: Security - SBOM & SCA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "requirements*.txt"
+      - "**/*.py"
+      - ".github/workflows/ci-sbom-sca.yml"
+      - "policy/waivers.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-sca-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom-sca:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare directories
+        run: mkdir -p EVIDENCE/P09
+
+      - name: Generate SBOM (Syft - CycloneDX JSON)
+        run: |
+          docker run --rm -v $PWD:/work -w /work anchore/syft:latest \
+            packages dir:. -o cyclonedx-json > EVIDENCE/P09/sbom.json
+
+      - name: SCA Scan (Grype) from SBOM
+        run: |
+          docker run --rm -v $PWD:/work -w /work anchore/grype:latest \
+            sbom:/work/EVIDENCE/P09/sbom.json -o json > EVIDENCE/P09/sca_report.json
+
+      - name: Generate SCA summary
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+
+          with open("EVIDENCE/P09/sca_report.json", "r", encoding="utf-8") as f:
+              data = json.load(f)
+
+          sev = Counter()
+          for match in data.get("matches", []):
+              vuln = match.get("vulnerability", {})
+              sev[vuln.get("severity", "UNKNOWN")] += 1
+
+          lines = ["# SCA Summary", ""]
+          if sev:
+              for level in ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"]:
+                  if sev[level]:
+                      lines.append(f"- {level}: {sev[level]}")
+          else:
+              lines.append("- No vulnerabilities found")
+
+          lines.append("\n## Waivers")
+          lines.append("See policy/waivers.yml for planned exceptions (if any)")
+
+          with open("EVIDENCE/P09/sca_summary.md", "w", encoding="utf-8") as f:
+              f.write("\n".join(lines))
+          PY
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-sca-artifacts
+          path: |
+            EVIDENCE/P09/sbom.json
+            EVIDENCE/P09/sca_report.json
+            EVIDENCE/P09/sca_summary.md
+          retention-days: 7
+
+      - name: Job summary
+        run: |
+          echo "## SBOM & SCA" >> $GITHUB_STEP_SUMMARY
+          echo "Artifacts:" >> $GITHUB_STEP_SUMMARY
+          echo "- EVIDENCE/P09/sbom.json" >> $GITHUB_STEP_SUMMARY
+          echo "- EVIDENCE/P09/sca_report.json" >> $GITHUB_STEP_SUMMARY
+          echo "- EVIDENCE/P09/sca_summary.md" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered by: $GITHUB_EVENT_NAME" >> $GITHUB_STEP_SUMMARY
+{
+  "cells": [],
+  "metadata": {
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 2
+}
