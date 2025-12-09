@@ -12,4 +12,3 @@ rules:
   #     cwe: "CWE-489"
   #   options:
   #     autofix: false
-
