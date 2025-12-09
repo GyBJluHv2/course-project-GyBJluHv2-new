@@ -31,6 +31,9 @@ jobs:
           black --check .
           isort --check-only .
 
+      - name: Security SAST Scan (P06-C4, Bandit)
+        run: bandit -r app/ -ll -ii -x tests/
+
       - name: Tests with Coverage (NFR-010)
         run: pytest -q --cov=app --cov-report=term-missing --cov-fail-under=80
 

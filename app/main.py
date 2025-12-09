@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import uuid4
@@ -8,14 +9,97 @@ from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.models import Entry, EntryCreate, EntryUpdate, ReadingStatus
+
+# ============================================================================
+# Secure Logging Configuration (P06 - C3)
+# Logs without PII, only safe diagnostic information
+# ============================================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%SZ",
+)
+logger = logging.getLogger("reading_list_api")
+
+
+# ============================================================================
+# Security Headers Middleware (P06 - C1, Risk R03)
+# Protects against XSS, clickjacking, MIME sniffing
+# ============================================================================
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses (OWASP recommendations)"""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+
+        # Prevent XSS attacks
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+
+        # Content Security Policy
+        response.headers["Content-Security-Policy"] = "default-src 'self'"
+
+        # Referrer Policy
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+        # Cache control for sensitive data
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+
+        return response
+
+
+# ============================================================================
+# Request Body Size Limit Middleware (P06 - C1, Risk R09, NFR-008)
+# Protects against oversized payload DoS attacks
+# ============================================================================
+
+MAX_BODY_SIZE = 64 * 1024  # 64 KB limit
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Limit request body size to prevent DoS attacks"""
+
+    async def dispatch(self, request: Request, call_next):
+        content_length = request.headers.get("content-length")
+
+        if content_length:
+            if int(content_length) > MAX_BODY_SIZE:
+                logger.warning(
+                    f"Request rejected: body size {content_length} exceeds limit {MAX_BODY_SIZE}"
+                )
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "type": "/errors/payload-too-large",
+                        "title": "Payload Too Large",
+                        "status": 413,
+                        "detail": f"Request body exceeds max size of {MAX_BODY_SIZE} bytes",
+                        "correlation_id": str(uuid4()),
+                    },
+                    media_type="application/problem+json",
+                )
+
+        return await call_next(request)
+
 
 # Rate Limiter configuration (NFR-004, Risk R01)
 # Limit: 100 requests per minute per IP address
 limiter = Limiter(key_func=get_remote_address)
 
 app = FastAPI(title="SecDev Course App", version="0.1.0")
+
+# Add security middlewares
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestSizeLimitMiddleware)
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -135,6 +219,10 @@ def create_entry(request: Request, entry_data: EntryCreate):
     )
     _READING_LIST_DB["entries"].append(entry)
     _READING_LIST_DB["next_id"] += 1
+
+    # Secure logging without PII (P06-C3, NFR-007)
+    logger.info(f"CREATE_ENTRY | id={entry.id} | status={entry.status}")
+
     return entry
 
 
@@ -167,6 +255,12 @@ def update_entry(request: Request, entry_id: int, entry_data: EntryUpdate):
 
             updated_entry = entry.model_copy(update=update_dict)
             _READING_LIST_DB["entries"][i] = updated_entry
+
+            # Secure logging without PII (P06-C3, NFR-007)
+            logger.info(
+                f"UPDATE_ENTRY | id={entry_id} | fields={list(update_dict.keys())}"
+            )
+
             return updated_entry
 
     raise ApiError(code="not_found", message=f"Entry {entry_id} not found", status=404)
@@ -179,6 +273,10 @@ def delete_entry(request: Request, entry_id: int):
     for i, entry in enumerate(_READING_LIST_DB["entries"]):
         if entry.id == entry_id:
             _READING_LIST_DB["entries"].pop(i)
+
+            # Secure logging without PII (P06-C3, NFR-007)
+            logger.info(f"DELETE_ENTRY | id={entry_id}")
+
             return
     raise ApiError(code="not_found", message=f"Entry {entry_id} not found", status=404)
 
