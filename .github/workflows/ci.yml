@@ -84,7 +84,7 @@ jobs:
       # Verify non-root user (C2)
       - name: Verify container runs as non-root
         run: |
-          USER_ID=$(docker run --rm reading-list-api:latest id -u)
+          USER_ID=$(docker run --rm --entrypoint id reading-list-api:latest -u)
           echo "Container user ID: $USER_ID"
           if [ "$USER_ID" = "0" ]; then
             echo "::error::Container is running as root!"
