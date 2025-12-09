@@ -3,10 +3,19 @@ from typing import List, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from app.models import Entry, EntryCreate, EntryUpdate, ReadingStatus
 
+# Rate Limiter configuration (NFR-004, Risk R01)
+# Limit: 100 requests per minute per IP address
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(title="SecDev Course App", version="0.1.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 class ApiError(Exception):
@@ -71,7 +80,8 @@ def get_item(item_id: int):
 
 
 @app.post("/entries", response_model=Entry, status_code=201)
-def create_entry(entry_data: EntryCreate):
+@limiter.limit("100/minute")
+def create_entry(request: Request, entry_data: EntryCreate):
     """Создать новую запись в списке для чтения"""
     now = datetime.now(timezone.utc)
     entry = Entry(
@@ -89,13 +99,15 @@ def create_entry(entry_data: EntryCreate):
 
 
 @app.get("/entries", response_model=List[Entry])
-def get_entries():
+@limiter.limit("100/minute")
+def get_entries(request: Request):
     """Получить все записи из списка для чтения"""
     return _READING_LIST_DB["entries"]
 
 
 @app.get("/entries/{entry_id}", response_model=Entry)
-def get_entry(entry_id: int):
+@limiter.limit("100/minute")
+def get_entry(request: Request, entry_id: int):
     """Получить запись по ID"""
     for entry in _READING_LIST_DB["entries"]:
         if entry.id == entry_id:
@@ -104,7 +116,8 @@ def get_entry(entry_id: int):
 
 
 @app.put("/entries/{entry_id}", response_model=Entry)
-def update_entry(entry_id: int, entry_data: EntryUpdate):
+@limiter.limit("100/minute")
+def update_entry(request: Request, entry_id: int, entry_data: EntryUpdate):
     """Обновить существующую запись"""
     for i, entry in enumerate(_READING_LIST_DB["entries"]):
         if entry.id == entry_id:
@@ -120,7 +133,8 @@ def update_entry(entry_id: int, entry_data: EntryUpdate):
 
 
 @app.delete("/entries/{entry_id}", status_code=204)
-def delete_entry(entry_id: int):
+@limiter.limit("100/minute")
+def delete_entry(request: Request, entry_id: int):
     """Удалить запись из списка"""
     for i, entry in enumerate(_READING_LIST_DB["entries"]):
         if entry.id == entry_id:
@@ -130,8 +144,11 @@ def delete_entry(entry_id: int):
 
 
 @app.get("/entries/filter/by-status", response_model=List[Entry])
+@limiter.limit("100/minute")
 def filter_entries_by_status(
-    status: Optional[ReadingStatus] = None, author: Optional[str] = None
+    request: Request,
+    status: Optional[ReadingStatus] = None,
+    author: Optional[str] = None,
 ):
     """Фильтрация записей по статусу и/или автору"""
     result = _READING_LIST_DB["entries"]
