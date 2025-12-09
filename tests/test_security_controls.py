@@ -8,7 +8,7 @@ Tests for P06 Security Controls
 
 from fastapi.testclient import TestClient
 
-from app.main import MAX_BODY_SIZE, _READING_LIST_DB, app
+from app.main import _READING_LIST_DB, MAX_BODY_SIZE, app
 
 client = TestClient(app)
 
@@ -78,13 +78,13 @@ def test_oversized_request_rejected():
     """Negative test: Oversized request body should be rejected (R09)"""
     # Create a payload larger than MAX_BODY_SIZE (64KB)
     large_notes = "X" * (MAX_BODY_SIZE + 1000)
-    response = client.post(
+    # Note: TestClient may not enforce Content-Length properly
+    # This test documents the expected behavior
+    _ = client.post(
         "/entries",
         json={"title": "Book", "author": "Author", "notes": large_notes},
         headers={"Content-Length": str(len(large_notes) + 100)},
     )
-    # Note: TestClient may not enforce Content-Length, but middleware checks it
-    # In real scenario with large body, this would return 413
 
 
 def test_payload_too_large_error_format():
