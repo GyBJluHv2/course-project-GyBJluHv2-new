@@ -100,9 +100,10 @@ def test_get_nonexistent_entry():
     response = client.get("/entries/99999")
     assert response.status_code == 404
     body = response.json()
-    assert "error" in body
-    assert body["error"]["code"] == "not_found"
-    assert "99999" in body["error"]["message"]
+    # RFC 7807 format
+    assert body["type"] == "/errors/not_found"
+    assert body["status"] == 404
+    assert "99999" in body["detail"]
 
 
 def test_update_entry():
@@ -153,7 +154,9 @@ def test_update_nonexistent_entry():
     response = client.put("/entries/99999", json={"title": "New Title"})
     assert response.status_code == 404
     body = response.json()
-    assert body["error"]["code"] == "not_found"
+    # RFC 7807 format
+    assert body["type"] == "/errors/not_found"
+    assert body["status"] == 404
 
 
 def test_delete_entry():
@@ -178,7 +181,9 @@ def test_delete_nonexistent_entry():
     response = client.delete("/entries/99999")
     assert response.status_code == 404
     body = response.json()
-    assert body["error"]["code"] == "not_found"
+    # RFC 7807 format
+    assert body["type"] == "/errors/not_found"
+    assert body["status"] == 404
 
 
 def test_filter_by_status():

@@ -1,8 +1,10 @@
 from datetime import datetime, timezone
 from typing import List, Optional
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -18,7 +20,28 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+# ============================================================================
+# RFC 7807 Problem Details Error Format (ADR-002)
+# ============================================================================
+
+
+class ProblemDetail(BaseModel):
+    """RFC 7807 Problem Details for HTTP APIs"""
+
+    type: str = Field(default="about:blank", description="URI reference for error type")
+    title: str = Field(..., description="Short human-readable summary")
+    status: int = Field(..., description="HTTP status code")
+    detail: Optional[str] = Field(None, description="Human-readable explanation")
+    instance: Optional[str] = Field(None, description="URI reference for occurrence")
+    correlation_id: str = Field(
+        default_factory=lambda: str(uuid4()),
+        description="Unique ID for tracing in logs",
+    )
+
+
 class ApiError(Exception):
+    """Application-level error with RFC 7807 support"""
+
     def __init__(self, code: str, message: str, status: int = 400):
         self.code = code
         self.message = message
@@ -27,19 +50,36 @@ class ApiError(Exception):
 
 @app.exception_handler(ApiError)
 async def api_error_handler(request: Request, exc: ApiError):
+    """Handle ApiError with RFC 7807 Problem Details format"""
+    problem = ProblemDetail(
+        type=f"/errors/{exc.code}",
+        title=exc.code.replace("_", " ").title(),
+        status=exc.status,
+        detail=exc.message,
+        instance=str(request.url.path),
+    )
     return JSONResponse(
         status_code=exc.status,
-        content={"error": {"code": exc.code, "message": exc.message}},
+        content=problem.model_dump(),
+        media_type="application/problem+json",
     )
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    # Normalize FastAPI HTTPException into our error envelope
-    detail = exc.detail if isinstance(exc.detail, str) else "http_error"
+    """Handle FastAPI HTTPException with RFC 7807 format"""
+    detail = exc.detail if isinstance(exc.detail, str) else "An error occurred"
+    problem = ProblemDetail(
+        type="/errors/http-error",
+        title="HTTP Error",
+        status=exc.status_code,
+        detail=detail,
+        instance=str(request.url.path),
+    )
     return JSONResponse(
         status_code=exc.status_code,
-        content={"error": {"code": "http_error", "message": detail}},
+        content=problem.model_dump(),
+        media_type="application/problem+json",
     )
 
 
