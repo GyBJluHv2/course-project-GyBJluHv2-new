@@ -1,0 +1,14 @@
+rules:
+  # Custom placeholder rule example (disabled by default)
+  # - id: avoid-print-in-prod
+  #   patterns:
+  #     - pattern: print(...)
+  #   message: "Avoid using print in production code; use logging instead."
+  #   severity: INFO
+  #   languages:
+  #     - python
+  #   metadata:
+  #     category: style
+  #     cwe: "CWE-489"
+  #   options:
+  #     autofix: false
