@@ -1,0 +1,13 @@
+# Gitleaks configuration (minimal)
+
+[gitleaks]
+title = "Gitleaks config for P10"
+
+# Allowlist for false positives; extend as needed
+[allowlist]
+description = "Global allowlist"
+paths = []
+regexes = []
+commits = []
+files = []
+
