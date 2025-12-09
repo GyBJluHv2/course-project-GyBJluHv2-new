@@ -31,8 +31,11 @@ jobs:
           black --check .
           isort --check-only .
 
-      - name: Tests
-        run: pytest -q
+      - name: Tests with Coverage (NFR-010)
+        run: pytest -q --cov=app --cov-report=term-missing --cov-fail-under=80
+
+      - name: Dependency Security Scan (NFR-005)
+        run: pip-audit --strict --progress-spinner=off
 
       - name: Pre-commit (all files)
         run: pre-commit run --all-files
