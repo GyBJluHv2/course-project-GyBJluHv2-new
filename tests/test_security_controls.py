@@ -247,4 +247,3 @@ def test_error_response_has_correlation_id():
     body = response.json()
     assert "correlation_id" in body
     assert len(body["correlation_id"]) == 36  # UUID format
-
