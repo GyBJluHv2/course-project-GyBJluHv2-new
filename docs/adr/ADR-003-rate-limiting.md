@@ -246,4 +246,3 @@ rate_limit_hits = Counter(
 - **Tests:** `tests/test_rate_limit.py`
 - **Implementation:** `app/main.py`
 - **PR:** P04-threat-model (initial implementation)
-

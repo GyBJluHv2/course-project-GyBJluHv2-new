@@ -195,4 +195,3 @@ class EntryCreate(BaseModel):
 - **Risk Register:** R02, R03, R08, R09 (RISKS.md)
 - **Tests:** `tests/test_reading_list.py::test_create_entry_validation_error`
 - **Implementation:** `app/models.py`
-

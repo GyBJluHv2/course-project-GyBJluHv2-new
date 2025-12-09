@@ -250,4 +250,3 @@ USE_RFC7807_ERRORS = os.getenv("USE_RFC7807_ERRORS", "true") == "true"
 - **Risk Register:** R04, R06 (RISKS.md)
 - **Tests:** `tests/test_errors.py`
 - **Implementation:** `app/main.py`
-
