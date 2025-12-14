@@ -69,7 +69,7 @@ jobs:
 
           # Make directory writable for ZAP container
           chmod 777 .
-          
+
           docker run --rm \
             --network host \
             -v "$PWD:/zap/wrk:rw" \
