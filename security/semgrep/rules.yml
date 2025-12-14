@@ -1,14 +1,12 @@
 rules:
-  # Custom placeholder rule example (disabled by default)
-  # - id: avoid-print-in-prod
-  #   patterns:
-  #     - pattern: print(...)
-  #   message: "Avoid using print in production code; use logging instead."
-  #   severity: INFO
-  #   languages:
-  #     - python
-  #   metadata:
-  #     category: style
-  #     cwe: "CWE-489"
-  #   options:
-  #     autofix: false
+  - id: avoid-dangerous-eval
+    message: "Avoid using eval() on untrusted input; use safe parsing instead."
+    severity: ERROR
+    languages: [python]
+    patterns:
+      - pattern: eval(...)
+    metadata:
+      cwe: "CWE-95"
+      category: security
+      references:
+        - https://cwe.mitre.org/data/definitions/95.html

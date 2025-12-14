@@ -3,10 +3,11 @@
 [gitleaks]
 title = "Gitleaks config for P10"
 
-# Allowlist for false positives; extend as needed
+# Allowlist for known false positives (example)
 [allowlist]
 description = "Global allowlist"
+# Example regex allowlist: dummy tokens used in tests/docs
+regexes = ["dummy_token_[0-9]{3}"]
 paths = []
-regexes = []
 commits = []
 files = []
