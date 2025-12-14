@@ -67,12 +67,14 @@ jobs:
           # Pull ZAP image (use GHCR to avoid Docker Hub rate limits)
           docker pull ghcr.io/zaproxy/zaproxy:stable
 
+          # Make directory writable for ZAP container
+          chmod 777 .
+          
           docker run --rm \
             --network host \
-            -u "$(id -u):$(id -g)" \
             -v "$PWD:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:stable /zap/zap-baseline.py \
-              -t "${TARGET_URL}/health" \
+              -t "${TARGET_URL}" \
               -r zap_baseline.html \
               -J zap_baseline.json \
               -w zap_baseline.md \
