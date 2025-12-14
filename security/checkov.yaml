@@ -1,5 +1,6 @@
 # Checkov configuration for Reading List API
 # IaC security scanning settings
+# Updated: trigger workflow
 
 quiet: false
 compact: true
