@@ -1,0 +1,11 @@
+# Hadolint configuration for Reading List API
+# Customized rules for the project
+
+ignored:
+  # Allow apt-get with version pinning via comments
+  - DL3008
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+
