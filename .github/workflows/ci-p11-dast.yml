@@ -64,9 +64,12 @@ jobs:
       - name: Run ZAP Baseline
         run: |
           set +e
+          # Pull ZAP image (use GHCR to avoid Docker Hub rate limits)
+          docker pull ghcr.io/zaproxy/zaproxy:stable
+
           docker run --rm \
             -v "$PWD:/zap/wrk" \
-            owasp/zap2docker-stable zap-baseline.py \
+            ghcr.io/zaproxy/zaproxy:stable /zap/zap-baseline.py \
               -t "${TARGET_URL}" \
               -r zap_baseline.html \
               -J zap_baseline.json \
