@@ -69,9 +69,10 @@ jobs:
 
           docker run --rm \
             --network host \
-            -v "$PWD:/zap/wrk" \
+            -u "$(id -u):$(id -g)" \
+            -v "$PWD:/zap/wrk:rw" \
             ghcr.io/zaproxy/zaproxy:stable /zap/zap-baseline.py \
-              -t "${TARGET_URL}" \
+              -t "${TARGET_URL}/health" \
               -r zap_baseline.html \
               -J zap_baseline.json \
               -w zap_baseline.md \
