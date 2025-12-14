@@ -68,6 +68,7 @@ jobs:
           docker pull ghcr.io/zaproxy/zaproxy:stable
 
           docker run --rm \
+            --network host \
             -v "$PWD:/zap/wrk" \
             ghcr.io/zaproxy/zaproxy:stable /zap/zap-baseline.py \
               -t "${TARGET_URL}" \
