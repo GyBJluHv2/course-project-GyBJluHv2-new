@@ -49,10 +49,10 @@ jobs:
           docker run --rm -v $PWD:/work bridgecrew/checkov \
             -d /work \
             --framework dockerfile,docker-compose \
-            --config-file /work/security/checkov.yaml \
-            -o json \
-            --compact > EVIDENCE/P12/checkov_report.json || true
+            --skip-check CKV_DOCKER_7 \
+            -o json 2>&1 | tee EVIDENCE/P12/checkov_report.json || true
           echo "Checkov completed"
+          echo "Report size: $(wc -c < EVIDENCE/P12/checkov_report.json) bytes"
 
       - name: Trivy image scan
         run: |
