@@ -7,7 +7,7 @@ compact: true
 framework:
   - kubernetes
   - dockerfile
-  - docker-compose
+  - yaml
 
 # Skip checks that are not relevant or false positives
 skip-check:
