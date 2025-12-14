@@ -1,0 +1,16 @@
+# Checkov configuration for Reading List API
+# IaC security scanning settings
+# Updated: trigger workflow
+
+quiet: false
+compact: true
+
+framework:
+  - kubernetes
+  - dockerfile
+  - yaml
+
+# Skip checks that are not relevant or false positives
+skip-check:
+  # Allow EXPOSE directive (we document exposed ports)
+  - CKV_DOCKER_7

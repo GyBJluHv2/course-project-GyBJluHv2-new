@@ -1,0 +1,14 @@
+# Trivy configuration for Reading List API
+# Container vulnerability scanning
+
+scan:
+  scanners:
+    - vuln
+    - secret
+    - config
+  severity:
+    - CRITICAL
+    - HIGH
+    - MEDIUM
+
+format: "json"
