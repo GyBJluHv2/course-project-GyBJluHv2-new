@@ -22,8 +22,8 @@ jobs:
     env:
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
-      TARGET_URL: http://localhost:8080
-      HEALTH_URL: http://localhost:8080/health
+      TARGET_URL: http://127.0.0.1:8080
+      HEALTH_URL: http://127.0.0.1:8080/health
 
     steps:
       - name: Checkout
@@ -39,6 +39,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install uvicorn
 
       - name: Prepare evidence directory
         run: mkdir -p EVIDENCE/P11
@@ -75,11 +76,12 @@ jobs:
           status=$?
           echo "ZAP exit code: $status"
           mkdir -p EVIDENCE/P11
+          ls -la
           if ls zap_baseline.* 1> /dev/null 2>&1; then
             mv zap_baseline.* EVIDENCE/P11/
           else
-            echo "ZAP did not produce reports; creating placeholders"
-            touch EVIDENCE/P11/zap_baseline.html EVIDENCE/P11/zap_baseline.json EVIDENCE/P11/zap_baseline.md
+            echo "ZAP did not produce reports"
+            exit 1
           fi
           # Always continue (we triage via reports, not by exit code)
           exit 0
