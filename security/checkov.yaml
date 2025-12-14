@@ -14,4 +14,3 @@ framework:
 skip-check:
   # Allow EXPOSE directive (we document exposed ports)
   - CKV_DOCKER_7
-

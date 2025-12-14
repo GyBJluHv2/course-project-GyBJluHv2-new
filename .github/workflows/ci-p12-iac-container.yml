@@ -88,4 +88,3 @@ jobs:
           echo "- EVIDENCE/P12/hadolint_report.json" >> $GITHUB_STEP_SUMMARY
           echo "- EVIDENCE/P12/checkov_report.json" >> $GITHUB_STEP_SUMMARY
           echo "- EVIDENCE/P12/trivy_report.json" >> $GITHUB_STEP_SUMMARY
-
